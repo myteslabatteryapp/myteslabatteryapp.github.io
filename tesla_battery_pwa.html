@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#080808">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Battery">
+<title>Tesla Battery</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#080808;--bg1:#101010;--bg2:#181818;--bg3:#222;
+  --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.1);--b3:rgba(255,255,255,.16);
+  --text:#f2f2f2;--muted:#666;--muted2:#888;
+  --red:#E31937;--red2:rgba(227,25,55,.15);--red3:rgba(227,25,55,.08);
+  --good:#22c55e;--good2:rgba(34,197,94,.12);
+  --warn:#f59e0b;--warn2:rgba(245,158,11,.12);
+  --bad:#ef4444;--bad2:rgba(239,68,68,.12);
+  --blue:#3b82f6;--blue2:rgba(59,130,246,.12);
+  --teal:#00d4c8;--teal2:rgba(0,212,200,.1);
+  --r:16px;--r2:12px;
+  --st:env(safe-area-inset-top,0px);
+  --sb:env(safe-area-inset-bottom,0px);
+}
+html{height:100%;background:var(--bg)}
+body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:calc(120px + var(--sb))}
+
+.topbar{position:sticky;top:0;z-index:200;padding:calc(var(--st) + 14px) 20px 14px;background:rgba(8,8,8,.9);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between}
+.tb-left{display:flex;align-items:center;gap:10px}
+.tb-logo{width:30px;height:30px;background:var(--red);border-radius:7px;display:grid;place-items:center}
+.tb-logo svg{width:17px;height:10px;fill:#fff}
+.tb-title{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700}
+.tb-model{font-size:11px;color:var(--muted2);margin-top:1px}
+.live-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:var(--good2);border:1px solid rgba(34,197,94,.2);font-size:11px;color:var(--good);font-weight:500;max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--good);animation:blink 2s infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.page{display:none;padding:16px 16px 24px;max-width:480px;margin:0 auto;animation:fadeUp .25s ease}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.sec-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;margin-top:20px;display:flex;align-items:center;justify-content:space-between}
+.sec-label:first-child{margin-top:0}
+
+.card{background:var(--bg1);border:1px solid var(--b1);border-radius:var(--r);padding:16px;margin-bottom:10px;position:relative;overflow:hidden}
+.card-accent{position:absolute;top:0;left:0;right:0;height:2px}
+.card-title{font-size:12px;font-weight:500;color:var(--muted2);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+
+/* SOC RING */
+.soc-hero{position:relative;display:flex;flex-direction:column;align-items:center;padding:28px 20px 20px;background:var(--bg1);border:1px solid var(--b1);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.soc-hero::before{content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:280px;height:160px;background:radial-gradient(ellipse,rgba(227,25,55,.1) 0%,transparent 70%);pointer-events:none}
+.ring-wrap{position:relative;width:160px;height:160px;margin-bottom:16px}
+.ring-svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--b2);stroke-width:10}
+.ring-fill{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1),stroke .5s}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-family:'Rajdhani',sans-serif;font-size:42px;font-weight:700;line-height:1}
+.ring-label{font-size:11px;color:var(--muted2);margin-top:2px}
+.soc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;width:100%}
+.ss-item{text-align:center}
+.ss-val{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:600;line-height:1}
+.ss-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* SOH */
+.soh-main{display:flex;align-items:flex-end;gap:8px;margin-bottom:14px}
+.soh-pct{font-family:'Rajdhani',sans-serif;font-size:48px;font-weight:700;line-height:1}
+.soh-meta{padding-bottom:6px}
+.soh-cap{font-size:13px;color:var(--muted2)}
+.soh-cap span{color:var(--text);font-weight:500}
+.soh-bar-wrap{position:relative;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:8px}
+.soh-bar{height:100%;border-radius:4px;transition:width 1s ease}
+.soh-ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.soh-note{font-size:11px;color:var(--muted2);padding:8px 10px;background:var(--bg3);border-radius:8px;line-height:1.5;margin-top:10px}
+
+/* STATS */
+.stat2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.stat4{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sbox{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r2);padding:12px 13px}
+.sbox-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.sbox-val{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:600;line-height:1}
+.sbox-unit{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* CHEM */
+.chem-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:500}
+.lfp{background:var(--teal2);color:var(--teal);border:1px solid rgba(0,212,200,.2)}
+.nca{background:var(--warn2);color:var(--warn);border:1px solid rgba(245,158,11,.2)}
+.nmc{background:var(--blue2);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
+
+/* RANGE COMPARE */
+.range-compare{display:flex;flex-direction:column;gap:8px}
+.rc-row{display:flex;align-items:center;gap:10px}
+.rc-label{font-size:11px;color:var(--muted2);width:52px;flex-shrink:0}
+.rc-bar-wrap{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.rc-bar{height:100%;border-radius:4px}
+.rc-val{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;width:48px;text-align:right;flex-shrink:0}
+
+/* CHARGE SESSION */
+.charge-session{padding:12px 0;border-bottom:1px solid var(--b1)}
+.charge-session:last-child{border-bottom:none;padding-bottom:0}
+.cs-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.cs-title{font-size:13px;font-weight:500}
+.cs-date{font-size:11px;color:var(--muted)}
+.cs-bar-track{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.cs-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--good),#4ade80)}
+.cs-footer{display:flex;justify-content:space-between;font-size:11px;color:var(--muted2)}
+.cs-kwh{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--good)}
+.cs-cost{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--teal)}
+.month-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:10px 0 6px;border-bottom:1px solid var(--b1);margin-bottom:4px}
+
+/* CHART */
+.hchart-wrap{height:130px;position:relative;margin-top:4px}
+
+/* DEG TIMELINE */
+.deg-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b1)}
+.deg-row:last-child{border-bottom:none}
+.deg-date{font-size:11px;color:var(--muted);width:52px;flex-shrink:0}
+.deg-bar-wrap{flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.deg-bar{height:100%;border-radius:3px;transition:width .8s ease}
+.deg-val{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;width:42px;text-align:right;flex-shrink:0}
+
+/* TIPS */
+.tip-row{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--teal2);border:1px solid rgba(0,212,200,.15);border-radius:10px;margin-bottom:8px;font-size:12px;line-height:1.55}
+.tip-row:last-child{margin-bottom:0}
+
+/* SELECTORS */
+.scroll-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 4px}
+.scroll-chips::-webkit-scrollbar{display:none}
+.sel-chip{flex-shrink:0;padding:6px 13px;border-radius:16px;border:1px solid var(--b2);background:var(--bg2);color:var(--muted2);font-size:12px;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .18s;white-space:nowrap}
+.sel-chip.am{background:var(--red2);border-color:rgba(227,25,55,.3);color:#ff7a8a;font-weight:500}
+.sel-chip.ay{background:var(--teal2);border-color:rgba(0,212,200,.3);color:var(--teal)}
+
+/* OVERRIDE */
+.ov-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.ov-field label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+.ov-wrap{position:relative}
+.ov-input{width:100%;background:var(--bg2);border:1px solid var(--b2);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;padding:9px 38px 9px 12px;outline:none;transition:border-color .15s;-webkit-appearance:none}
+.ov-input:focus{border-color:var(--teal)}
+.ov-unit{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted);pointer-events:none}
+.ov-btn{width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px solid var(--teal);background:var(--teal2);color:var(--teal);font-size:13px;font-family:'Outfit',sans-serif;font-weight:500;cursor:pointer}
+.ov-modified{display:inline-block;padding:2px 6px;border-radius:5px;font-size:10px;background:var(--warn2);color:var(--warn);border:1px solid rgba(245,158,11,.2);margin-left:6px}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(8,8,8,.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--b1);padding:10px 10px calc(10px + var(--sb));display:flex;gap:6px}
+.nav-btn{flex:1;padding:9px 4px;border-radius:10px;border:none;background:transparent;color:var(--muted);font-size:11px;font-family:'Outfit',sans-serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .15s}
+.nav-btn span{font-size:20px}
+.nav-btn.active{color:var(--red);background:var(--red3)}
+
+/* MORE BUTTON */
+.more-btn{width:100%;padding:10px;border-radius:10px;border:1px solid var(--b2);background:transparent;color:var(--muted2);font-size:13px;font-family:'Outfit',sans-serif;cursor:pointer;margin-top:8px;transition:background .15s}
+.more-btn:active{background:var(--bg2)}
+
+/* COST INPUT */
+.cost-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cost-label{font-size:12px;color:var(--muted2);flex-shrink:0}
+.cost-input{background:var(--bg2);border:1px solid var(--b2);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;padding:7px 10px;outline:none;width:100px;-webkit-appearance:none}
+.cost-input:focus{border-color:var(--teal)}
+
+@keyframes sheen{to{left:200%}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-left">
+    <div class="tb-logo"><svg viewBox="0 0 24 15"><path d="M12 0C8.8 0 6 1.3 4.2 3.3L0 2.7C2.4 1 6.9 0 12 0s9.6 1 12 2.7l-4.2.6C18 1.3 15.2 0 12 0zM12 4c-2.8 0-5.2.8-6.8 2H2.8C4.8 3.8 8.1 2.7 12 2.7s7.2 1.1 9.2 3.3h-2.4C17.2 4.8 14.8 4 12 4zM12 6.7L7 8v7h10V8L12 6.7z"/></svg></div>
+    <div><div class="tb-title">Battery</div><div class="tb-model" id="tb-model">21 Model Y · Standard RWD · NCA</div></div>
+  </div>
+  <div class="live-pill"><div class="live-dot"></div><span id="api-status">연결 중...</span></div>
+</div>
+
+<!-- 배터리 탭 -->
+<div class="page active" id="page-battery">
+  <div class="soc-hero" style="margin-top:16px">
+    <div class="ring-wrap">
+      <svg class="ring-svg" viewBox="0 0 160 160">
+        <circle class="ring-bg" cx="80" cy="80" r="68"/>
+        <circle class="ring-fill" id="ring-fill" cx="80" cy="80" r="68" stroke-dasharray="427.3" stroke-dashoffset="94" stroke="var(--good)"/>
+      </svg>
+      <div class="ring-center">
+        <div class="ring-pct" id="ring-pct" style="color:var(--good)">78<span style="font-size:20px">%</span></div>
+        <div class="ring-label">SOC</div>
+      </div>
+    </div>
+    <div class="soc-stats">
+      <div class="ss-item"><div class="ss-val" id="ss-range">-</div><div class="ss-lbl">예상 km</div></div>
+      <div class="ss-item" style="border-left:1px solid var(--b1);border-right:1px solid var(--b1)"><div class="ss-val" id="ss-kwh">-</div><div class="ss-lbl">kWh 충전</div></div>
+      <div class="ss-item"><div class="ss-val" id="ss-limit">-</div><div class="ss-lbl">충전 목표</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-accent" style="background:linear-gradient(90deg,var(--good),transparent)"></div>
+    <div class="card-title">배터리 건강도 (SOH) <span id="soh-badge" class="chem-badge nca">NCA</span></div>
+    <div class="soh-main">
+      <div class="soh-pct" id="soh-pct" style="color:var(--good)">-<span style="font-size:22px;color:var(--muted2)">%</span></div>
+      <div class="soh-meta">
+        <div class="soh-cap">현재 <span id="soh-cap-now">-</span> kWh</div>
+        <div class="soh-cap">원래 <span id="soh-cap-orig">54</span> kWh</div>
+      </div>
+    </div>
+    <div class="soh-bar-wrap"><div class="soh-bar" id="soh-bar" style="width:0%;background:var(--good)"></div></div>
+    <div class="soh-ticks"><span>60%</span><span>70%</span><span>80%</span><span>90%</span><span>100%</span></div>
+    <div class="soh-note" id="soh-note">데이터 로딩 중...</div>
+  </div>
+
+  <div class="card">
+    <div class="card-accent" style="background:linear-gradient(90deg,var(--blue),transparent)"></div>
+    <div class="card-title">주행거리 비교</div>
+    <div class="range-compare">
+      <div class="rc-row"><div class="rc-label" style="font-size:10px">신차 공인</div><div class="rc-bar-wrap"><div class="rc-bar" style="width:100%;background:var(--b3)"></div></div><div class="rc-val" style="color:var(--muted2)" id="rc-orig">393 km</div></div>
+      <div class="rc-row"><div class="rc-label" style="font-size:10px">현재 최대</div><div class="rc-bar-wrap"><div class="rc-bar" id="rc-bar-max" style="background:var(--blue)"></div></div><div class="rc-val" style="color:var(--blue)" id="rc-max">- km</div></div>
+      <div class="rc-row"><div class="rc-label" style="font-size:10px">현재 잔량</div><div class="rc-bar-wrap"><div class="rc-bar" id="rc-bar-now" style="background:var(--good)"></div></div><div class="rc-val" style="color:var(--good)" id="rc-now">- km</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:0">
+    <div class="card-title">이번 충전</div>
+    <div class="stat4">
+      <div class="sbox"><div class="sbox-lbl">추가 에너지</div><div class="sbox-val" id="ch-added" style="color:var(--good)">-</div><div class="sbox-unit">kWh</div></div>
+      <div class="sbox"><div class="sbox-lbl">충전 속도</div><div class="sbox-val" id="ch-power">-</div><div class="sbox-unit">kW</div></div>
+      <div class="sbox"><div class="sbox-lbl">충전 목표</div><div class="sbox-val" id="ch-target">-</div><div class="sbox-unit">%</div></div>
+      <div class="sbox"><div class="sbox-lbl">충전 비용</div><div class="sbox-val" id="ch-cost" style="color:var(--teal)">-</div><div class="sbox-unit">원</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 충전 탭 -->
+<div class="page" id="page-charge">
+  <!-- kW당 단가 설정 -->
+  <div class="sec-label" style="margin-top:16px">요금 설정</div>
+  <div class="card">
+    <div class="cost-row">
+      <span class="cost-label">가정용 (kWh당)</span>
+      <input class="cost-input" id="home-rate" type="number" value="100" min="1" max="1000" oninput="saveRates()">
+      <span style="font-size:12px;color:var(--muted)">원</span>
+    </div>
+    <div class="cost-row" style="margin-bottom:0">
+      <span class="cost-label">슈퍼차저 (kWh당)</span>
+      <input class="cost-input" id="super-rate" type="number" value="390" min="1" max="1000" oninput="saveRates()">
+      <span style="font-size:12px;color:var(--muted)">원</span>
+    </div>
+  </div>
+
+  <!-- 최근 충전 3개 -->
+  <div class="sec-label">
+    최근 충전
+    <button onclick="switchTab('history', document.querySelector('.nav-btn:nth-child(3)'))" style="padding:3px 10px;border-radius:8px;border:1px solid var(--b2);background:transparent;color:var(--muted2);font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif">더보기 →</button>
+  </div>
+  <div class="card" id="recent-charges"></div>
+
+  <!-- 충전 트렌드 -->
+  <div class="sec-label">충전량 트렌드</div>
+  <div class="card"><div class="hchart-wrap"><canvas id="charge-chart"></canvas></div></div>
+
+  <!-- 새로고침 -->
+  <button onclick="fetchBatteryData()" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--teal);background:var(--teal2);color:var(--teal);font-size:14px;font-family:'Outfit',sans-serif;font-weight:500;cursor:pointer;margin-top:4px">↻ 데이터 새로고침</button>
+</div>
+
+<!-- 충전 기록 탭 -->
+<div class="page" id="page-history">
+  <div class="sec-label" style="margin-top:16px">월별 충전 기록</div>
+  <div id="history-content"></div>
+</div>
+
+<!-- SOH 탭 -->
+<div class="page" id="page-soh">
+  <div class="sec-label" style="margin-top:16px">SOH 추정 방법</div>
+  <div class="card">
+    <div class="card-accent" style="background:linear-gradient(90deg,var(--teal),transparent)"></div>
+    <div class="card-title">계산 원리</div>
+    <div class="tip-row"><span style="font-size:15px;flex-shrink:0">📐</span><span>SOH(%) = (현재 100% 기준 ideal_range ÷ 신차 공인 ideal_range) × 100<br>Tesla API의 <b>ideal_battery_range</b> 값으로 간접 추정합니다.</span></div>
+    <div class="tip-row" style="background:var(--warn2);border-color:rgba(245,158,11,.15)"><span style="font-size:15px;flex-shrink:0">⚠️</span><span>100% 충전 직후 측정이 가장 정확합니다.</span></div>
+  </div>
+
+  <div class="sec-label">열화 기록</div>
+  <div class="card">
+    <div class="card-title">월별 SOH 변화</div>
+    <div id="deg-timeline"></div>
+    <div class="hchart-wrap" style="margin-top:12px"><canvas id="soh-chart"></canvas></div>
+  </div>
+
+  <div class="sec-label">내 차량 설정</div>
+  <div class="card">
+    <div class="card-title">모델 <span id="ov-modified-badge" class="ov-modified" style="display:none">수정됨</span></div>
+    <div class="scroll-chips" id="model-chips">
+      <div class="sel-chip am" onclick="pickModel(this,'Model Y')">Model Y</div>
+      <div class="sel-chip" onclick="pickModel(this,'Model 3')">Model 3</div>
+      <div class="sel-chip" onclick="pickModel(this,'Model S')">Model S</div>
+      <div class="sel-chip" onclick="pickModel(this,'Model X')">Model X</div>
+      <div class="sel-chip" onclick="pickModel(this,'Cybertruck')">Cybertruck</div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="card-title">연도</div>
+    <div class="scroll-chips" id="year-chips"></div>
+    <div style="height:10px"></div>
+    <div class="card-title">트림</div>
+    <div class="scroll-chips" id="trim-chips"></div>
+    <div style="height:14px"></div>
+    <div class="card-title">직접 수정</div>
+    <div class="ov-grid">
+      <div class="ov-field"><label>배터리 용량</label><div class="ov-wrap"><input class="ov-input" id="ov-cap" type="number" step="0.1" value="54"><span class="ov-unit">kWh</span></div></div>
+      <div class="ov-field"><label>공인 주행거리</label><div class="ov-wrap"><input class="ov-input" id="ov-range" type="number" step="1" value="393"><span class="ov-unit">km</span></div></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">차량 화면 → Controls → Software → Additional Vehicle Information</div>
+    <button class="ov-btn" onclick="applyOverride()">이 값으로 적용</button>
+  </div>
+
+  <div class="sec-label">배터리 관리 팁</div>
+  <div class="card" id="tips-content"></div>
+</div>
+
+<!-- 하단 네비 -->
+<!-- 금액 수정 모달 -->
+<div id="cost-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg1);border:1px solid var(--b2);border-radius:20px;padding:24px;width:100%;max-width:320px">
+    <div style="font-size:14px;font-weight:500;margin-bottom:4px">충전 금액 수정</div>
+    <div id="modal-info" style="font-size:11px;color:var(--muted);margin-bottom:16px"></div>
+    <div style="position:relative;margin-bottom:16px">
+      <input id="modal-cost-input" type="number" style="width:100%;background:var(--bg2);border:1px solid var(--b2);border-radius:10px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:600;padding:12px 44px 12px 14px;outline:none;-webkit-appearance:none">
+      <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted)">원</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button onclick="closeModal()" style="padding:12px;border-radius:10px;border:1px solid var(--b2);background:transparent;color:var(--muted2);font-size:13px;font-family:'Outfit',sans-serif;cursor:pointer">취소</button>
+      <button id="modal-save-btn" style="padding:12px;border-radius:10px;border:1px solid var(--teal);background:var(--teal2);color:var(--teal);font-size:13px;font-family:'Outfit',sans-serif;font-weight:500;cursor:pointer">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn active" onclick="switchTab('battery',this)"><span>🔋</span>배터리</button>
+  <button class="nav-btn" onclick="switchTab('charge',this)"><span>⚡</span>충전</button>
+  <button class="nav-btn" onclick="switchTab('history',this)"><span>📋</span>기록</button>
+  <button class="nav-btn" onclick="switchTab('soh',this)"><span>📊</span>SOH</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── DB
+const DB = {
+  'Model Y':{
+    2020:[{trim:'Long Range AWD',cap:75,range:483,chem:'NCA'},{trim:'Performance AWD',cap:75,range:451,chem:'NCA'}],
+    2021:[{trim:'Standard RWD',cap:54,range:393,chem:'NCA',note:'한국 2월 출시·단종 · Panasonic 2170'},{trim:'Long Range AWD',cap:75,range:507,chem:'NCA',note:'Panasonic 2170'},{trim:'Performance AWD',cap:75,range:467,chem:'NCA',note:'Panasonic 2170'}],
+    2022:[{trim:'Standard RWD',cap:60,range:431,chem:'LFP',note:'중국·유럽 전용'},{trim:'Long Range AWD',cap:75,range:531,chem:'NCA',note:'Panasonic 2170'},{trim:'Performance AWD',cap:75,range:494,chem:'NCA',note:'Panasonic 2170'}],
+    2023:[{trim:'Standard RWD',cap:60,range:455,chem:'LFP',note:'중국·유럽 전용'},{trim:'Long Range AWD',cap:75,range:531,chem:'NCA',note:'Panasonic 2170'},{trim:'Performance AWD',cap:75,range:491,chem:'NCA',note:'Panasonic 2170'}],
+    2024:[{trim:'Standard RWD',cap:60,range:455,chem:'LFP',note:'중국·유럽 전용'},{trim:'Long Range RWD',cap:75,range:586,chem:'NCA'},{trim:'Long Range AWD',cap:78.4,range:531,chem:'NCA',note:'Juniper'},{trim:'Performance AWD',cap:78.4,range:446,chem:'NCA',note:'Juniper'}],
+    2025:[{trim:'Standard RWD',cap:60,range:455,chem:'LFP',note:'중국·유럽 전용'},{trim:'Long Range RWD',cap:75,range:586,chem:'NCA'},{trim:'Long Range AWD',cap:78.4,range:500,chem:'NCA'},{trim:'Performance AWD',cap:82,range:446,chem:'NCA'}],
+  },
+  'Model 3':{
+    2019:[{trim:'Standard Range Plus',cap:54,range:402,chem:'NCA'},{trim:'Long Range AWD',cap:75,range:523,chem:'NCA'},{trim:'Performance AWD',cap:75,range:499,chem:'NCA'}],
+    2020:[{trim:'Standard Range Plus',cap:54,range:402,chem:'NCA'},{trim:'Long Range AWD',cap:75,range:580,chem:'NCA'},{trim:'Performance AWD',cap:75,range:547,chem:'NCA'}],
+    2021:[{trim:'Standard RWD',cap:54,range:402,chem:'LFP',note:'LFP 전환 10월~'},{trim:'Long Range AWD',cap:75,range:614,chem:'NCA'},{trim:'Performance AWD',cap:75,range:567,chem:'NCA'}],
+    2022:[{trim:'RWD',cap:60,range:491,chem:'LFP'},{trim:'Long Range AWD',cap:75,range:614,chem:'NCA'},{trim:'Performance AWD',cap:75,range:567,chem:'NCA'}],
+    2023:[{trim:'RWD',cap:60,range:491,chem:'LFP',note:'Highland'},{trim:'Long Range RWD',cap:78.1,range:702,chem:'NCA',note:'Highland'},{trim:'Long Range AWD',cap:78.1,range:629,chem:'NCA',note:'Highland'},{trim:'Performance AWD',cap:78.1,range:528,chem:'NCA',note:'Highland'}],
+    2024:[{trim:'RWD',cap:62.5,range:513,chem:'LFP'},{trim:'Long Range RWD',cap:78.1,range:702,chem:'NCA'},{trim:'Long Range AWD',cap:78.1,range:629,chem:'NCA'},{trim:'Performance AWD',cap:78.1,range:528,chem:'NCA'}],
+    2025:[{trim:'RWD',cap:62.5,range:584,chem:'LFP'},{trim:'Long Range RWD',cap:78.1,range:702,chem:'NCA'},{trim:'Long Range AWD',cap:78.1,range:629,chem:'NCA'},{trim:'Performance AWD',cap:78.1,range:480,chem:'NCA'}],
+  },
+  'Model S':{
+    2019:[{trim:'Long Range AWD',cap:100,range:595,chem:'NCA'},{trim:'Performance',cap:100,range:595,chem:'NCA'}],
+    2021:[{trim:'Long Range AWD',cap:100,range:652,chem:'NCA',note:'팔라디움'},{trim:'Plaid AWD',cap:100,range:600,chem:'NCA'}],
+    2022:[{trim:'Long Range AWD',cap:100,range:652,chem:'NCA'},{trim:'Plaid AWD',cap:100,range:600,chem:'NCA'}],
+    2023:[{trim:'Long Range AWD',cap:100,range:652,chem:'NCA'},{trim:'Plaid AWD',cap:100,range:600,chem:'NCA'}],
+    2024:[{trim:'Long Range AWD',cap:100,range:652,chem:'NCA'},{trim:'Plaid AWD',cap:100,range:600,chem:'NCA'}],
+    2025:[{trim:'Long Range AWD',cap:100,range:652,chem:'NCA'},{trim:'Plaid AWD',cap:100,range:600,chem:'NCA'}],
+  },
+  'Model X':{
+    2021:[{trim:'Long Range AWD',cap:100,range:547,chem:'NCA',note:'팔라디움'},{trim:'Plaid AWD',cap:100,range:531,chem:'NCA'}],
+    2022:[{trim:'Long Range AWD',cap:100,range:547,chem:'NCA'},{trim:'Plaid AWD',cap:100,range:531,chem:'NCA'}],
+    2023:[{trim:'Long Range AWD',cap:100,range:547,chem:'NCA'},{trim:'Plaid AWD',cap:100,range:531,chem:'NCA'}],
+    2024:[{trim:'Long Range AWD',cap:100,range:547,chem:'NCA'},{trim:'Plaid AWD',cap:100,range:531,chem:'NCA'}],
+    2025:[{trim:'Long Range AWD',cap:100,range:547,chem:'NCA'},{trim:'Plaid AWD',cap:100,range:531,chem:'NCA'}],
+  },
+  'Cybertruck':{
+    2023:[{trim:'AWD',cap:123,range:547,chem:'NMC'},{trim:'Cyberbeast',cap:123,range:499,chem:'NMC'}],
+    2024:[{trim:'AWD',cap:123,range:547,chem:'NMC'},{trim:'Cyberbeast',cap:123,range:499,chem:'NMC'}],
+    2025:[{trim:'AWD',cap:123,range:547,chem:'NMC'},{trim:'Cyberbeast',cap:123,range:499,chem:'NMC'}],
+  },
+};
+
+// ── STATE
+let curModel='Model Y', curYear=2021, curTrimIdx=0;
+let cap=54, maxRange=393, chem='NCA';
+let isOv=false, soc=0, soh=93.9; // SOH 초기값 - Tessie 최신 데이터 기준
+
+const sohHistory=[
+  {label:'24.04',val:100.0,newBatt:true}, // 배터리 교환
+  {label:'24.05',val:99.8},
+  {label:'24.06',val:98.2},
+  {label:'24.07',val:97.5},
+  {label:'24.08',val:96.6},
+  {label:'24.09',val:95.0},
+  {label:'24.10',val:94.6},
+  {label:'24.11',val:93.8},
+  {label:'25.03',val:93.8},
+  {label:'25.04',val:93.7},
+  {label:'25.05',val:93.9},
+  {label:'현재',val:0},
+];
+
+// ── 요금 설정
+function loadRates(){ return { home: parseInt(localStorage.getItem('homeRate')||'100'), super: parseInt(localStorage.getItem('superRate')||'390') }; }
+function saveRates(){
+  localStorage.setItem('homeRate', document.getElementById('home-rate').value);
+  localStorage.setItem('superRate', document.getElementById('super-rate').value);
+  renderRecentCharges();
+  renderHistory();
+}
+function calcCost(kwh, isSupercharger, customCost){
+  if(customCost!=null) return customCost;
+  const r = loadRates();
+  return Math.round(kwh * (isSupercharger ? r.super : r.home));
+}
+
+// ── 충전 기록
+function getChargeRecords(){ return JSON.parse(localStorage.getItem('chargeRecords')||'[]'); }
+function saveChargeRecord(cs){
+  const records = getChargeRecords();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ko-KR');
+  const timeStr = now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  const isSupercharger = (cs.charger_power||0) >= 50;
+  const kwh = parseFloat((cs.charge_energy_added||0).toFixed(1));
+  const existing = records.find(r=>r.date===dateStr && Math.abs(r.kwh-kwh)<1);
+  if(existing) return;
+  const r = loadRates();
+  const autoCost = Math.round(kwh * (isSupercharger ? r.super : r.home));
+  records.unshift({
+    date: dateStr, time: timeStr,
+    soc: cs.battery_level, kwh,
+    power: cs.charger_power||0,
+    limit: cs.charge_limit_soc||80,
+    supercharger: isSupercharger,
+    cost: autoCost  // 자동 계산값 저장, 나중에 수정 가능
+  });
+  if(records.length>60) records.pop();
+  localStorage.setItem('chargeRecords', JSON.stringify(records));
+}
+
+// ── 금액 수정 팝업
+function editCost(idx){
+  const records = getChargeRecords();
+  const r = records[idx];
+  if(!r) return;
+  const modal = document.getElementById('cost-modal');
+  document.getElementById('modal-info').textContent = `${r.date} · ${r.kwh}kWh · ${r.supercharger?'슈퍼차저':'가정용'}`;
+  document.getElementById('modal-cost-input').value = r.cost||0;
+  document.getElementById('modal-save-btn').onclick = ()=>{
+    const newCost = parseInt(document.getElementById('modal-cost-input').value)||0;
+    records[idx].cost = newCost;
+    localStorage.setItem('chargeRecords', JSON.stringify(records));
+    closeModal();
+    renderRecentCharges();
+    renderHistory();
+  };
+  modal.style.display='flex';
+}
+function closeModal(){ document.getElementById('cost-modal').style.display='none'; }
+
+// ── UI 업데이트
+function updateUI(cs){
+  if(!cs) return;
+  soc = cs.battery_level;
+  const idealMi = cs.ideal_battery_range||0;
+  const battRatedMi = cs.battery_range||0;
+  const battRatedKm = battRatedMi * 1.609;
+
+  // SOH는 실시간 계산 안 함 - 마지막 충전 완료 시점 고정값 사용
+  // (fetchSohRecord()에서 서버로부터 가져온 값 유지)
+
+  const range = Math.round(idealMi*1.609*(soc/100));
+  const maxR = Math.round(maxRange*(soh/100));
+  // 현재 실제 용량 추정 = 신규 기준 용량 × SOH
+  const newBattKwh = 53.51;
+  const capNow = (newBattKwh * soh / 100).toFixed(1);
+  const kwh = (soc/100*cap).toFixed(1);
+
+  // SOC 링
+  const circ=427.3, offset=circ*(1-soc/100);
+  const rc=soc>50?'var(--good)':soc>20?'var(--warn)':'var(--bad)';
+  document.getElementById('ring-fill').style.strokeDashoffset=offset;
+  document.getElementById('ring-fill').style.stroke=rc;
+  document.getElementById('ring-pct').style.color=rc;
+  document.getElementById('ring-pct').innerHTML=soc+'<span style="font-size:20px">%</span>';
+  document.getElementById('ss-range').textContent=range;
+  document.getElementById('ss-kwh').textContent=kwh;
+  document.getElementById('ss-limit').textContent=(cs.charge_limit_soc||80)+'%';
+
+  // SOH
+  const sohColor=soh>90?'var(--good)':soh>80?'var(--warn)':'var(--bad)';
+  document.getElementById('soh-pct').innerHTML=soh+'<span style="font-size:22px;color:var(--muted2)">%</span>';
+  document.getElementById('soh-pct').style.color=sohColor;
+  document.getElementById('soh-bar').style.width=Math.max(0,(soh-60)/40*100)+'%';
+  document.getElementById('soh-bar').style.background=sohColor;
+  document.getElementById('soh-cap-now').textContent=capNow;
+  document.getElementById('soh-cap-orig').textContent=cap;
+  const chemEl=document.getElementById('soh-badge');
+  chemEl.className='chem-badge '+(chem==='LFP'?'lfp':chem==='NMC'?'nmc':'nca');
+  chemEl.textContent=chem;
+  let note='';
+  if(soh>=95)note='✅ 매우 양호합니다.';
+  else if(soh>=90)note='✅ 양호한 상태입니다. 정상 범위예요.';
+  else if(soh>=80)note='🟡 약간 열화됐지만 일반 사용에 무리 없습니다.';
+  else note='🔴 열화가 상당합니다. 점검을 권장합니다.';
+  document.getElementById('soh-note').textContent=note;
+
+  // 주행거리 비교
+  document.getElementById('rc-orig').textContent=maxRange+' km';
+  document.getElementById('rc-max').textContent=maxR+' km';
+  document.getElementById('rc-now').textContent=range+' km';
+  document.getElementById('rc-bar-max').style.width=(maxR/maxRange*100)+'%';
+  document.getElementById('rc-bar-now').style.width=(range/maxRange*100)+'%';
+
+  // 충전 정보
+  const kwhAdded = parseFloat((cs.charge_energy_added||0).toFixed(1));
+  const isSupercharger = (cs.charger_power||0)>=50;
+  const cost = kwhAdded>0 ? calcCost(kwhAdded, isSupercharger).toLocaleString() : '-';
+  document.getElementById('ch-added').textContent=kwhAdded||'-';
+  document.getElementById('ch-power').textContent=cs.charger_power||'-';
+  document.getElementById('ch-target').textContent=(cs.charge_limit_soc||80)+'%';
+  document.getElementById('ch-cost').textContent=cost;
+
+  // topbar
+  const t=(DB[curModel][curYear]||[])[curTrimIdx]||{};
+  document.getElementById('tb-model').textContent=`${curYear} ${curModel} · ${t.trim||''} · ${chem}`;
+
+  // 충전 상태
+  const state=cs.charging_state;
+  if(state==='Charging'){
+    showApiStatus('충전 중 ⚡ · '+cs.charger_power+'kW · '+soc+'%','good');
+    // 충전 시작 SOC 저장 (처음 감지 시점)
+    if(!window._chargingTimer){
+      window._chargeStartSoc = soc;
+      console.log('충전 시작 SOC 저장:', soc);
+      window._chargingTimer = setInterval(()=>{
+        fetchBatteryData();
+      }, 30000);
+    }
+  } else {
+    if(window._chargingTimer){
+      clearInterval(window._chargingTimer);
+      window._chargingTimer = null;
+    }
+    if(state==='Complete'){
+      showApiStatus('충전 완료 ✅ · '+soc+'%','good');
+      // 충전 시작 SOC와 완료 SOC, 충전량으로 실제 배터리 용량 계산
+      const startSoc = window._chargeStartSoc || 0;
+      const endSoc = soc;
+      const kwhAdded = parseFloat((cs.charge_energy_added||0).toFixed(1));
+      const socDiff = endSoc - startSoc;
+      if(startSoc > 0 && socDiff > 5 && kwhAdded > 0){
+        // 실제 배터리 총 용량 = 충전량 ÷ SOC 변화량
+        const realCapacity = kwhAdded / (socDiff / 100);
+        const realSoh = Math.min(100, Math.round(realCapacity / 53.51 * 1000) / 10);
+        console.log(`실제 용량: ${realCapacity.toFixed(1)}kWh, SOH: ${realSoh}%`);
+        soh = realSoh;
+      }
+      saveSohRecord(soh, soc);
+      window._chargeStartSoc = 0;
+    } else {
+      showApiStatus('연동 완료 · '+new Date().toLocaleTimeString(),'good');
+    }
+  }
+
+  renderRecentCharges();
+  renderHistory();
+  renderDegTimeline();
+  renderTips();
+  updateSohChart();
+}
+
+// ── 최근 충전 3개
+function renderRecentCharges(){
+  const el=document.getElementById('recent-charges');
+  if(!el) return;
+  const records=getChargeRecords();
+  if(records.length===0){ el.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">충전 기록 없음<br>새로고침 버튼을 눌러주세요</div>'; return; }
+  el.innerHTML=records.slice(0,3).map((r,i)=>chargeItemHTML(r,i)).join('');
+}
+
+// ── 월별 전체 기록
+function renderHistory(){
+  const el=document.getElementById('history-content');
+  if(!el) return;
+  const records=getChargeRecords();
+  if(records.length===0){ el.innerHTML='<div class="card" style="text-align:center;color:var(--muted);padding:20px;font-size:13px">충전 기록이 없습니다</div>'; return; }
+
+  const groups={};
+  records.forEach((r,globalIdx)=>{
+    const parts=r.date.split('.');
+    const month=parts.length>=2?parts[0]+'.'+parts[1]+'월':r.date.substring(0,7);
+    if(!groups[month]) groups[month]={records:[],totalKwh:0,totalCost:0};
+    groups[month].records.push({...r, globalIdx});
+    groups[month].totalKwh+=parseFloat(r.kwh||0);
+    groups[month].totalCost+=(r.cost!=null?r.cost:calcCost(parseFloat(r.kwh||0),r.supercharger,null));
+  });
+
+  el.innerHTML=Object.entries(groups).map(([month,g])=>`
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--b1)">
+        <div style="font-size:13px;font-weight:500">${month}</div>
+        <div style="text-align:right">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;color:var(--teal)">${g.totalCost.toLocaleString()}원</div>
+          <div style="font-size:10px;color:var(--muted)">${g.totalKwh.toFixed(1)} kWh · ${g.records.length}회</div>
+        </div>
+      </div>
+      ${g.records.map(r=>chargeItemHTML(r,r.globalIdx)).join('')}
+    </div>
+  `).join('');
+}
+
+function chargeItemHTML(r, idx){
+  const cost = r.cost!=null ? r.cost : calcCost(parseFloat(r.kwh||0), r.supercharger, null);
+  const idxAttr = idx!=null ? `data-idx="${idx}"` : '';
+  return `<div class="charge-session">
+    <div class="cs-header">
+      <div><div class="cs-title">${r.supercharger?'슈퍼차저 ⚡':'가정용 충전'}</div><div class="cs-date">${r.date} ${r.time||''}</div></div>
+      <div style="text-align:right">
+        <div class="cs-kwh">+${r.kwh} kWh</div>
+        <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+          <div class="cs-cost">${cost.toLocaleString()}원</div>
+          ${idx!=null?`<button onclick="editCost(${idx})" style="padding:2px 6px;border-radius:5px;border:1px solid var(--b2);background:transparent;color:var(--muted);font-size:10px;cursor:pointer">수정</button>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="cs-bar-track"><div class="cs-bar-fill" style="width:${Math.min(100,r.soc||0)}%"></div></div>
+    <div class="cs-footer"><span>목표 ${r.limit||80}% · 현재 ${r.soc||0}%</span><span>${r.power||0}kW</span></div>
+  </div>`;
+}
+
+// ── SOH 기록 저장 (충전 완료 직후만)
+function saveSohRecord(sohVal, socVal){
+  const records = JSON.parse(localStorage.getItem('sohRecords')||'[]');
+  const now = new Date();
+  const label = (String(now.getFullYear()).slice(2)) + '.' + String(now.getMonth()+1).padStart(2,'0');
+  // 같은 달에 이미 기록 있으면 업데이트
+  const existing = records.find(r=>r.label===label);
+  if(existing){
+    existing.val = sohVal;
+    existing.soc = socVal;
+  } else {
+    records.push({label, val:sohVal, soc:socVal});
+  }
+  if(records.length > 24) records.shift(); // 최대 2년치
+  localStorage.setItem('sohRecords', JSON.stringify(records));
+  // sohHistory 마지막 현재 값 업데이트
+  sohHistory[sohHistory.length-1].val = sohVal;
+  renderDegTimeline();
+  updateSohChart();
+}
+
+// localStorage SOH 기록 불러와서 sohHistory에 병합
+function loadSohRecords(){
+  const records = JSON.parse(localStorage.getItem('sohRecords')||'[]');
+  if(records.length === 0) return;
+  // Tessie 고정 데이터 뒤에 실측 데이터 추가 (중복 제거)
+  records.forEach(r=>{
+    const existing = sohHistory.find(h=>h.label===r.label);
+    if(existing) existing.val = r.val;
+    else sohHistory.splice(sohHistory.length-1, 0, {label:r.label, val:r.val}); // 현재 앞에 삽입
+  });
+}
+function renderDegTimeline(){
+  const el=document.getElementById('deg-timeline');
+  if(!el) return;
+  const recent=sohHistory.slice(-8);
+  el.innerHTML=recent.map(d=>{
+    const color=d.old?'var(--muted)':d.val>=95?'var(--good)':d.val>=90?'var(--warn)':'var(--bad)';
+    const barW=d.val>0?Math.max(0,(d.val-85)/15*100):0;
+    const badge=d.newBatt?'<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:var(--teal2);color:var(--teal);border:1px solid rgba(0,212,200,.2);margin-left:4px">교환</span>':'';
+    const oldBadge=d.old?'<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:var(--bg3);color:var(--muted);margin-left:4px">구배터리</span>':'';
+    return `<div class="deg-row">
+      <div class="deg-date" style="width:70px">${d.label}${badge}${oldBadge}</div>
+      <div class="deg-bar-wrap"><div class="deg-bar" style="width:${barW}%;background:${color};${d.old?'opacity:0.4':''}"></div></div>
+      <div class="deg-val" style="color:${color};${d.old?'opacity:0.5':''}">${d.val>0?d.val+'%':'-'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── 팁
+function renderTips(){
+  const tips=[];
+  if(chem==='LFP') tips.push({icon:'🔋',text:'LFP 배터리는 100%까지 매일 충전해도 수명에 영향이 거의 없습니다.'});
+  else tips.push({icon:'🔋',text:'NCA 배터리는 평소 80~90%로 충전하세요. 장기 보관 시 50% 유지가 이상적입니다.'});
+  tips.push({icon:'📊',text:'충전할 때마다 새로고침 버튼을 누르면 충전 기록이 자동으로 저장됩니다.'});
+  tips.push({icon:'💰',text:'요금 설정에서 kWh당 단가를 입력하면 충전 비용이 자동으로 계산됩니다.'});
+  const el=document.getElementById('tips-content');
+  if(el) el.innerHTML=tips.map(t=>`<div class="tip-row"><span style="font-size:15px;flex-shrink:0">${t.icon}</span><span>${t.text}</span></div>`).join('');
+}
+
+// ── 모델 선택
+function pickModel(el,name){
+  document.querySelectorAll('#model-chips .sel-chip').forEach(c=>c.className='sel-chip');
+  el.className='sel-chip am';
+  curModel=name; curTrimIdx=0; isOv=false;
+  const years=Object.keys(DB[name]).map(Number).sort((a,b)=>b-a);
+  curYear=years[0];
+  renderYearChips(years); renderTrimChips(); applyDB();
+}
+function renderYearChips(years){
+  document.getElementById('year-chips').innerHTML=years.map((y,i)=>`<div class="sel-chip ${i===0?'ay':''}" onclick="pickYear(this,${y})">${y}</div>`).join('');
+}
+function pickYear(el,y){
+  document.querySelectorAll('#year-chips .sel-chip').forEach(c=>c.className='sel-chip');
+  el.className='sel-chip ay';
+  curYear=y; curTrimIdx=0; isOv=false;
+  renderTrimChips(); applyDB();
+}
+function renderTrimChips(){
+  const trims=DB[curModel][curYear]||[];
+  document.getElementById('trim-chips').innerHTML=trims.map((t,i)=>`<div class="sel-chip ${i===curTrimIdx?'am':''}" onclick="pickTrim(this,${i})">${t.trim}</div>`).join('');
+}
+function pickTrim(el,idx){
+  document.querySelectorAll('#trim-chips .sel-chip').forEach(c=>c.className='sel-chip');
+  el.className='sel-chip am';
+  curTrimIdx=idx; isOv=false; applyDB();
+}
+function applyDB(){
+  const t=(DB[curModel][curYear]||[])[curTrimIdx];
+  if(!t) return;
+  cap=t.cap; maxRange=t.range; chem=t.chem;
+  document.getElementById('ov-cap').value=cap;
+  document.getElementById('ov-range').value=maxRange;
+  document.getElementById('ov-modified-badge').style.display='none';
+}
+function applyOverride(){
+  const c=parseFloat(document.getElementById('ov-cap').value);
+  const r=parseFloat(document.getElementById('ov-range').value);
+  if(!isNaN(c)&&c>0) cap=c;
+  if(!isNaN(r)&&r>0) maxRange=r;
+  isOv=true;
+  document.getElementById('ov-modified-badge').style.display='';
+  if(navigator.vibrate) navigator.vibrate([15,8,15]);
+}
+
+// ── 탭 전환
+function switchTab(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+// ── API 상태
+function showApiStatus(msg,type){
+  const el=document.getElementById('api-status');
+  if(!el) return;
+  el.textContent=msg;
+  const pill=el.closest('.live-pill');
+  if(pill){
+    if(type==='good') pill.style.cssText='background:var(--good2);border-color:rgba(34,197,94,.2);color:var(--good)';
+    else if(type==='warn') pill.style.cssText='background:var(--warn2);border-color:rgba(245,158,11,.2);color:var(--warn)';
+    else pill.style.cssText='background:var(--bad2);border-color:rgba(239,68,68,.2);color:var(--bad)';
+  }
+}
+
+// ── 서버에서 마지막 충전 완료 SOH 가져오기
+async function fetchSohRecord(){
+  try {
+    const res = await fetch(API_BASE + '/soh-record');
+    const data = await res.json();
+    if(data.soh){
+      soh = data.soh;
+      console.log('서버 SOH 기록 로드:', soh + '%', data.date);
+      // SOH 히스토리 마지막 현재값 업데이트
+      sohHistory[sohHistory.length-1].val = soh;
+      renderDegTimeline();
+      updateSohChart();
+      // SOH 카드 업데이트
+      const newBattKwh = 53.51;
+      const capNow = (newBattKwh * soh / 100).toFixed(1);
+      const sohColor = soh>90?'var(--good)':soh>80?'var(--warn)':'var(--bad)';
+      document.getElementById('soh-pct').innerHTML = soh + '<span style="font-size:22px;color:var(--muted2)">%</span>';
+      document.getElementById('soh-pct').style.color = sohColor;
+      document.getElementById('soh-bar').style.width = Math.max(0,(soh-60)/40*100)+'%';
+      document.getElementById('soh-bar').style.background = sohColor;
+      document.getElementById('soh-cap-now').textContent = capNow;
+      let note = '';
+      if(soh>=95) note='✅ 매우 양호합니다.';
+      else if(soh>=90) note='✅ 양호한 상태입니다. 정상 범위예요.';
+      else if(soh>=80) note='🟡 약간 열화됐지만 일반 사용에 무리 없습니다.';
+      else note='🔴 열화가 상당합니다. 점검을 권장합니다.';
+      document.getElementById('soh-note').textContent = note;
+      // 마지막 충전 일자 표시
+      if(data.date){
+        const d = new Date(data.date);
+        document.getElementById('soh-note').textContent += ' (마지막 충전: ' + d.toLocaleDateString('ko-KR') + ')';
+      }
+    }
+  } catch(e) {
+    console.log('SOH 기록 없음 - 초기값 사용');
+  }
+}
+// ── Tesla API
+const API_BASE='https://tesla-server.vercel.app';
+let vehicleId='';
+
+async function fetchVehicleId(){
+  try{
+    const res=await fetch(API_BASE+'/vehicles');
+    const data=await res.json();
+    if(data.response&&data.response.length>0){
+      vehicleId=data.response[0].id_s;
+      showApiStatus('차량 연결됨','good');
+      return true;
+    }
+    showApiStatus('차량 없음','bad'); return false;
+  }catch(e){ showApiStatus('서버 연결 실패','bad'); return false; }
+}
+
+async function fetchBatteryData(){
+  if(!vehicleId){ const ok=await fetchVehicleId(); if(!ok) return; }
+  try{
+    showApiStatus('가져오는 중...','warn');
+    const res=await fetch(API_BASE+'/battery/'+vehicleId);
+    const data=await res.json();
+    if(data.error&&(data.error.includes('offline')||data.error.includes('unavailable'))){
+      showApiStatus('차량 깨우는 중...','warn');
+      await fetch(API_BASE+'/wake/'+vehicleId,{method:'POST'});
+      await new Promise(r=>setTimeout(r,8000));
+      await fetchBatteryData(); return;
+    }
+    const cs=data.response?.charge_state;
+    if(!cs){ showApiStatus('데이터 없음','bad'); return; }
+    if(cs.charging_state==='Charging'||cs.charging_state==='Complete') saveChargeRecord(cs);
+    updateUI(cs);
+  }catch(e){ showApiStatus('서버 연결 실패','bad'); }
+}
+
+// ── 차트
+let chargeChart=null, sohChart=null;
+
+function initChargeChart(){
+  const ctx=document.getElementById('charge-chart').getContext('2d');
+  const records=getChargeRecords().slice(0,7).reverse();
+  chargeChart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:records.map(r=>r.date.split('.').slice(1).join('/')||r.date),
+      datasets:[{data:records.map(r=>r.kwh),backgroundColor:'rgba(34,197,94,.3)',borderColor:'var(--good)',borderWidth:1,borderRadius:4}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#555',font:{size:10}}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#555',font:{size:10},callback:v=>v+'kWh'}}}}
+  });
+}
+
+function updateSohChart(){
+  if(!sohChart) return;
+  sohChart.data.datasets[0].data=sohHistory.map(d=>d.val>0?d.val:null);
+  sohChart.update('none');
+}
+
+function initSohChart(){
+  const ctx=document.getElementById('soh-chart').getContext('2d');
+  sohChart=new Chart(ctx,{
+    type:'line',
+    data:{labels:sohHistory.map(d=>d.label),
+      datasets:[{data:sohHistory.map(d=>d.val>0?d.val:null),borderColor:'var(--teal)',borderWidth:2,backgroundColor:'rgba(0,212,200,.07)',fill:true,tension:0.4,pointRadius:2,pointBackgroundColor:'var(--teal)',pointBorderWidth:0,spanGaps:true}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#555',font:{size:9},maxTicksLimit:7}},
+        y:{min:88,max:102,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#555',font:{size:10},callback:v=>v+'%'}}}}
+  });
+}
+
+// ── INIT
+(function(){
+  // 요금 설정 불러오기
+  const rates=loadRates();
+  document.getElementById('home-rate').value=rates.home;
+  document.getElementById('super-rate').value=rates.super;
+
+  // 모델 설정 (21 MY Standard RWD)
+  curModel='Model Y'; curYear=2021; curTrimIdx=0;
+  const years=Object.keys(DB['Model Y']).map(Number).sort((a,b)=>b-a);
+  renderYearChips(years);
+  // 2021 연도 활성화
+  setTimeout(()=>{
+    document.querySelectorAll('#year-chips .sel-chip').forEach((c,i)=>{
+      c.className='sel-chip'+(years[i]===2021?' ay':'');
+    });
+  },0);
+  renderTrimChips();
+  applyDB();
+  loadSohRecords();
+  renderRecentCharges();
+  renderHistory();
+  renderDegTimeline();
+  renderTips();
+  initChargeChart();
+  initSohChart();
+
+  // 서버에서 마지막 충전 완료 SOH 로드 (고정값)
+  fetchSohRecord();
+
+  // API 연동 - 현재 배터리 상태
+  fetchBatteryData();
+})();
+</script>
+</body>
+</html>
