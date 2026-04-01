@@ -512,11 +512,13 @@ function updateUI(cs){
   document.getElementById('rc-bar-max').style.width=(maxR/maxRange*100)+'%';
   document.getElementById('rc-bar-now').style.width=(range/maxRange*100)+'%';
 
-  // 충전 정보
-  const kwhAdded = parseFloat((cs.charge_energy_added||0).toFixed(1));
+  // 충전 정보 - charge_energy_added는 누적값이므로 참고용으로만 표시
+  const kwhTotal = parseFloat((cs.charge_energy_added||0).toFixed(1));
   const isSupercharger = (cs.charger_power||0)>=50;
-  const cost = kwhAdded>0 ? calcCost(kwhAdded, isSupercharger).toLocaleString() : '-';
-  document.getElementById('ch-added').textContent=kwhAdded||'-';
+  // 이번 세션 충전량은 cron에서 계산 (시작값 - 완료값)
+  // 앱에서는 현재 누적값만 표시
+  const cost = kwhTotal>0 ? calcCost(kwhTotal, isSupercharger).toLocaleString() : '-';
+  document.getElementById('ch-added').textContent=kwhTotal||'-';
   document.getElementById('ch-power').textContent=cs.charger_power||'-';
   document.getElementById('ch-target').textContent=(cs.charge_limit_soc||80)+'%';
   document.getElementById('ch-cost').textContent=cost;
@@ -763,30 +765,34 @@ async function fetchSohRecord(){
     if(data.soh){
       soh = data.soh;
       console.log('서버 SOH 기록 로드:', soh + '%', data.date);
+
       // SOH 히스토리 마지막 현재값 업데이트
       sohHistory[sohHistory.length-1].val = soh;
       renderDegTimeline();
       updateSohChart();
-      // SOH 카드 업데이트
-      const newBattKwh = 53.51;
-      const capNow = (newBattKwh * soh / 100).toFixed(1);
+
+      // 실제 배터리 용량 (서버에서 계산된 값 사용)
+      const capNow = data.realCapacity ? data.realCapacity.toFixed(1) : (53.51 * soh / 100).toFixed(1);
       const sohColor = soh>90?'var(--good)':soh>80?'var(--warn)':'var(--bad)';
+
       document.getElementById('soh-pct').innerHTML = soh + '<span style="font-size:22px;color:var(--muted2)">%</span>';
       document.getElementById('soh-pct').style.color = sohColor;
       document.getElementById('soh-bar').style.width = Math.max(0,(soh-60)/40*100)+'%';
       document.getElementById('soh-bar').style.background = sohColor;
       document.getElementById('soh-cap-now').textContent = capNow;
+
       let note = '';
       if(soh>=95) note='✅ 매우 양호합니다.';
       else if(soh>=90) note='✅ 양호한 상태입니다. 정상 범위예요.';
       else if(soh>=80) note='🟡 약간 열화됐지만 일반 사용에 무리 없습니다.';
       else note='🔴 열화가 상당합니다. 점검을 권장합니다.';
-      document.getElementById('soh-note').textContent = note;
-      // 마지막 충전 일자 표시
+
+      // 마지막 충전 정보 표시
       if(data.date){
         const d = new Date(data.date);
-        document.getElementById('soh-note').textContent += ' (마지막 충전: ' + d.toLocaleDateString('ko-KR') + ')';
+        note += ` (마지막 충전: ${d.toLocaleDateString('ko-KR')} · ${data.startSoc}%→${data.endSoc}% · ${data.kwhThisSession}kWh)`;
       }
+      document.getElementById('soh-note').textContent = note;
     }
   } catch(e) {
     console.log('SOH 기록 없음 - 초기값 사용');
