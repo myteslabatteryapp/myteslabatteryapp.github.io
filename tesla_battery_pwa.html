@@ -420,10 +420,10 @@ function updateUI(cs){
   if(!cs) return;
   soc = cs.battery_level;
   const idealMi = cs.ideal_battery_range||0;
-  const range = Math.round(idealMi*1.609*(soc/100));
+  const range = Math.round(idealMi*1.609);
   const maxR = Math.round(maxRange*(soh/100));
   const capNow = (53.51 * soh / 100).toFixed(1);
-  const kwh = (soc/100*cap).toFixed(1);
+  const kwh = parseFloat((cs.charge_energy_added||0).toFixed(1));
 
   const circ=427.3, offset=circ*(1-soc/100);
   const rc=soc>50?'var(--good)':soc>20?'var(--warn)':'var(--bad)';
