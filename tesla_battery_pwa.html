@@ -192,14 +192,15 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Outfit'
   <div class="card">
     <div class="cost-row">
       <span class="cost-label">가정용 (kWh당)</span>
-      <input class="cost-input" id="home-rate" type="number" value="100" min="1" max="1000" oninput="saveRates()">
+      <input class="cost-input" id="home-rate" type="number" value="100" min="1" max="1000">
       <span style="font-size:12px;color:var(--muted)">원</span>
     </div>
     <div class="cost-row" style="margin-bottom:0">
       <span class="cost-label">슈퍼차저 (kWh당)</span>
-      <input class="cost-input" id="super-rate" type="number" value="390" min="1" max="1000" oninput="saveRates()">
+      <input class="cost-input" id="super-rate" type="number" value="390" min="1" max="1000">
       <span style="font-size:12px;color:var(--muted)">원</span>
     </div>
+    <button onclick="saveRates()" style="width:100%;margin-top:12px;padding:10px;border-radius:10px;border:1px solid var(--teal);background:var(--teal2);color:var(--teal);font-size:13px;font-family:'Outfit',sans-serif;font-weight:500;cursor:pointer">요금 저장</button>
   </div>
   <div class="sec-label">
     최근 충전
@@ -345,11 +346,30 @@ const sohHistory=[
 
 // ── 요금 설정 (초기화 버그 수정: 저장된 값 우선 로드)
 function loadRates(){ return { home: parseInt(localStorage.getItem('homeRate')||'100'), super: parseInt(localStorage.getItem('superRate')||'390') }; }
-function saveRates(){
+async function saveRates(){
   const h = document.getElementById('home-rate').value;
   const s = document.getElementById('super-rate').value;
   if(h) localStorage.setItem('homeRate', h);
   if(s) localStorage.setItem('superRate', s);
+  try {
+    await fetch(API_BASE + '/rates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ home: parseInt(h), super: parseInt(s) })
+    });
+  } catch(e) { console.log('요금 서버 저장 실패:', e.message); }
+}
+async function loadRatesFromServer(){
+  try {
+    const res = await fetch(API_BASE + '/rates');
+    const data = await res.json();
+    if(data.home) {
+      localStorage.setItem('homeRate', String(data.home));
+      localStorage.setItem('superRate', String(data.super));
+      document.getElementById('home-rate').value = data.home;
+      document.getElementById('super-rate').value = data.super;
+    }
+  } catch(e) { console.log('요금 서버 로드 실패 - localStorage 사용'); }
 }
 function calcCost(kwh, isSupercharger){
   const r = loadRates();
@@ -646,6 +666,18 @@ async function fetchSohRecord(){
     const data=await res.json();
     if(!data.soh) return;
     soh=data.soh;
+
+    // 월별 SOH 히스토리에 자동 추가
+    if(data.date){
+      const d=new Date(data.date);
+      const label=String(d.getFullYear()).slice(2)+'.'+String(d.getMonth()+1).padStart(2,'0');
+      const existing=sohHistory.find(h=>h.label===label);
+      if(existing){ existing.val=soh; }
+      else {
+        // 현재 앞에 삽입
+        sohHistory.splice(sohHistory.length-1,0,{label,val:soh});
+      }
+    }
     sohHistory[sohHistory.length-1].val=soh;
     renderDegTimeline(); updateSohChart();
     const capNow=data.realCapacity?data.realCapacity.toFixed(1):(53.51*soh/100).toFixed(1);
@@ -742,6 +774,7 @@ function initSohChart(){
   initChargeChart(); initSohChart();
   fetchSohRecord();
   loadChargeRecords();
+  loadRatesFromServer();
   fetchBatteryData();
 })();
 </script>
